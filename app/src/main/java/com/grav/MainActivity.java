@@ -349,18 +349,18 @@ public class MainActivity extends AppCompatActivity {
                 minBuffer
         );
 
-        // Modo VOICE_COMMUNICATION: usa caminho de hardware dedicado a comunicação,
-        // com menor latência que STREAM_MUSIC em dispositivos Motorola/MediaTek
+        // Modo MEDIA: usa caminho de hardware dedicado a mídia,
+        // ideal para reprodução de áudio com maior qualidade
         AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
-        am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        am.setMode(AudioManager.MODE_NORMAL);
 
         // AudioTrack com buffer reduzido à metade — drena mais rápido, menos delay de saída
         // PERFORMANCE_MODE_LOW_LATENCY: pipeline direto, sem mixer do sistema
         int trackBufferSize = minBuffer / 2;
 
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build();
 
         AudioFormat audioFormat = new AudioFormat.Builder()
