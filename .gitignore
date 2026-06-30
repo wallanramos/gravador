@@ -1,2 +1,29 @@
-gravador.zip
-buid.sh
+```
+# Android build artifacts
+build/
+.gradle/
+*.apk
+*.aar
+*.dex
+
+# Android studio
+.idea/
+*.iml
+*.iws
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# Temp files
+*.tmp
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```
