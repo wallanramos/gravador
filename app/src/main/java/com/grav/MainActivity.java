@@ -49,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 
     private AudioRecord audioRecord;
-    private AudioRecord monitorRecord;
     private AudioTrack audioTrack;
     private boolean isRecording = false;
     private boolean isMonitoring = false;
@@ -287,10 +286,21 @@ public class MainActivity extends AppCompatActivity {
         final int finalBufferSize = bufferSize;
         recordingThread = new Thread(() -> writeWavFile(finalBufferSize));
         recordingThread.start();
+
+        // Se o monitoramento estiver ativo, reinicia para usar o novo audioRecord
+        if (isMonitoring) {
+            stopMonitor();
+            startMonitor();
+        }
     }
 
     private void stopRecording() {
         isRecording = false;
+
+        // Para o monitoramento se estiver ativo, pois ele usa o mesmo audioRecord
+        if (isMonitoring) {
+            stopMonitor();
+        }
 
         if (audioRecord != null) {
             audioRecord.stop();
@@ -340,14 +350,18 @@ public class MainActivity extends AppCompatActivity {
         // Buffer mínimo para o AudioRecord — não pode ser menor, senão dropa amostras
         int minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
 
-        // AudioRecord com UNPROCESSED — sem nenhum processamento do sistema
-        monitorRecord = new AudioRecord(
-                MediaRecorder.AudioSource.UNPROCESSED,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                minBuffer
-        );
+        // Cria um AudioRecord dedicado só para monitoração se não estiver gravando
+        if (audioRecord == null) {
+            // AudioRecord com UNPROCESSED — sem nenhum processamento do sistema
+            audioRecord = new AudioRecord(
+                    MediaRecorder.AudioSource.UNPROCESSED,
+                    SAMPLE_RATE,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    minBuffer
+            );
+            audioRecord.startRecording();
+        }
 
         // Modo MEDIA: usa caminho de hardware dedicado a mídia,
         // ideal para reprodução de áudio com maior qualidade
@@ -382,7 +396,6 @@ public class MainActivity extends AppCompatActivity {
             audioTrack.setPreferredDevice(selectedOutputDevice);
         }
 
-        monitorRecord.startRecording();
         audioTrack.play();
         isMonitoring = true;
 
@@ -397,7 +410,7 @@ public class MainActivity extends AppCompatActivity {
             byte[] buffer = new byte[finalBuffer];
             while (isMonitoring) {
                 // READ_NON_BLOCKING: não espera o buffer encher — envia assim que tiver dados
-                int read = monitorRecord.read(buffer, 0, finalBuffer, AudioRecord.READ_NON_BLOCKING);
+                int read = audioRecord.read(buffer, 0, finalBuffer, AudioRecord.READ_NON_BLOCKING);
                 if (read > 0) {
                     applyGain(buffer, read);
                     // WRITE_NON_BLOCKING: não bloqueia a thread na escrita, mantém o loop fluindo
@@ -411,11 +424,6 @@ public class MainActivity extends AppCompatActivity {
     private void stopMonitor() {
         isMonitoring = false;
 
-        if (monitorRecord != null) {
-            monitorRecord.stop();
-            monitorRecord.release();
-            monitorRecord = null;
-        }
         if (audioTrack != null) {
             audioTrack.stop();
             audioTrack.release();
@@ -471,6 +479,16 @@ public class MainActivity extends AppCompatActivity {
                     // Grava o áudio puro, sem aplicar ganho
                     tempOut.write(buffer, 0, read);
                     waveformHandler.post(() -> waveformView.addAmplitude(amplitude));
+                }
+                
+                // Se o monitoramento estiver ativo, lê novamente para enviar ao AudioTrack
+                if (isMonitoring && audioTrack != null) {
+                    byte[] monitorBuffer = new byte[bufferSize];
+                    int monitorRead = audioRecord.read(monitorBuffer, 0, bufferSize);
+                    if (monitorRead > 0) {
+                        applyGain(monitorBuffer, monitorRead);
+                        audioTrack.write(monitorBuffer, 0, monitorRead, AudioTrack.WRITE_NON_BLOCKING);
+                    }
                 }
             }
         } catch (IOException e) {
