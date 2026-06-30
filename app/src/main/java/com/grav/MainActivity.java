@@ -412,9 +412,11 @@ public class MainActivity extends AppCompatActivity {
                 // READ_NON_BLOCKING: não espera o buffer encher — envia assim que tiver dados
                 int read = audioRecord.read(buffer, 0, finalBuffer, AudioRecord.READ_NON_BLOCKING);
                 if (read > 0) {
-                    applyGain(buffer, read);
+                    // Aplica ganho APENAS para o monitoramento
+                    byte[] monitorBuffer = Arrays.copyOf(buffer, read);
+                    applyGain(monitorBuffer, read);
                     // WRITE_NON_BLOCKING: não bloqueia a thread na escrita, mantém o loop fluindo
-                    audioTrack.write(buffer, 0, read, AudioTrack.WRITE_NON_BLOCKING);
+                    audioTrack.write(monitorBuffer, 0, read, AudioTrack.WRITE_NON_BLOCKING);
                 }
             }
         });
