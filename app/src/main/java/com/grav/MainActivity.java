@@ -466,7 +466,9 @@ public class MainActivity extends AppCompatActivity {
             while (isRecording) {
                 int read = audioRecord.read(buffer, 0, bufferSize);
                 if (read > 0) {
+                    // Calcula amplitude antes de qualquer processamento
                     float amplitude = calculateAmplitude(buffer, read);
+                    // Grava o áudio puro, sem aplicar ganho
                     tempOut.write(buffer, 0, read);
                     waveformHandler.post(() -> waveformView.addAmplitude(amplitude));
                 }
