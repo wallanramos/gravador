@@ -479,15 +479,12 @@ public class MainActivity extends AppCompatActivity {
                     // Grava o áudio puro, sem aplicar ganho
                     tempOut.write(buffer, 0, read);
                     waveformHandler.post(() -> waveformView.addAmplitude(amplitude));
-                }
-                
-                // Se o monitoramento estiver ativo, lê novamente para enviar ao AudioTrack
-                if (isMonitoring && audioTrack != null) {
-                    byte[] monitorBuffer = new byte[bufferSize];
-                    int monitorRead = audioRecord.read(monitorBuffer, 0, bufferSize);
-                    if (monitorRead > 0) {
-                        applyGain(monitorBuffer, monitorRead);
-                        audioTrack.write(monitorBuffer, 0, monitorRead, AudioTrack.WRITE_NON_BLOCKING);
+                    
+                    // Se o monitoramento estiver ativo, envia os MESMOS dados com ganho aplicado
+                    if (isMonitoring && audioTrack != null) {
+                        byte[] monitorBuffer = Arrays.copyOf(buffer, read);
+                        applyGain(monitorBuffer, read);
+                        audioTrack.write(monitorBuffer, 0, read, AudioTrack.WRITE_NON_BLOCKING);
                     }
                 }
             }
